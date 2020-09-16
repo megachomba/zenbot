@@ -161,7 +161,7 @@ PredictionInput.Type = SkillshotType.SkillshotLine
 -- <summary>
 --     The unit that the prediction will made for.
 -- </summary>
-PredictionInput.Unit = objManager.player
+PredictionInput.Unit = player
 
 -- <summary>
 --     Set to true to increase the prediction radius by the unit bounding radius.
@@ -400,8 +400,8 @@ function Prediction:getDashingPrediction(input)
 end
 
 function Prediction:getImmobilePrediction( input, remainingImmobileT)
-  local timeToReachTargetPosition = input.Delay + input.Unit.pos:dist(input.getFrom()) / input.Speed;
-  if (timeToReachTargetPosition <= remainingImmobileT + input.getRealRadius() / input.Unit.moveSpeed) then
+  local timeToReachTargetPosition = input.Delay + input.Unit.pos:dist(input:getFrom()) / input.Speed;
+  if (timeToReachTargetPosition <= remainingImmobileT + input:getRealRadius() / input.Unit.moveSpeed) then
     return PredictionOutput(input.Unit.pos, input.Unit.pos, HitChance.Immobile)
   end
   -- if not, imma still cast there as chance are pretty high
@@ -425,8 +425,8 @@ function Prediction:getPositionOnPath(input, path, speed)
   end
   local pLenght= path[0]:dist(path[1])
   --skillshots with only a de;ay
-  if pLenght >= input.Delay * speed - input.getRealRadius() && math.abs(input.Speed - 100000000000) < 0.0000000001 then
-    
+  if pLenght >= input.Delay * speed - input:getRealRadius() && math.abs(input.Speed - 100000000000) < 0.0000000001 then
+    let tDistance = input.Delay * speed - input
   end
 end
 print("end of dobby pred")
