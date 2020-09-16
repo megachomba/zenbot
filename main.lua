@@ -178,11 +178,39 @@ PredictionInput._from = player.pos
 -- </summary>
 PredictionInput._rangeCheckFrom = player.pos
 
+
+--constructors i need in lua for predictionInput
+function PredictionInput:__init(unit, delay)
+  self.Unit = unit
+  self.Delay= delay
+end
+
+function PredictionInput:__init(unit, delay, radius)
+  self.Unit = unit
+  self.Delay= delay
+  self.Radius= radius
+end
+
+function PredictionInput:__init(unit, delay, radius, speed)
+  self.Unit = unit
+  self.Delay= delay
+  self.Radius= radius
+  self.Speed= speed
+end
+
+function PredictionInput:__init(unit, delay, radius, speed, collisionable)
+  self.Unit = unit
+  self.Delay= delay
+  self.Radius= radius
+  self.Speed= speed
+  self.CollisionObjects= collisionable
+end
+
 function PredictionInput:getFrom() 
   if self._from:to2D():valid() then
     return self._from
   else
-    return objManager.player.pos
+    return player.serverPos
   end
 end
 
@@ -203,7 +231,7 @@ function PredictionInput:getRangeCheckFrom()
   if self._rangeCheckFrom:to2D():valid() then
     return self._rangeCheckFrom
   else
-    return self._rangeCheckFrom
+    return player.serverPos
   end
 end
 
@@ -214,7 +242,7 @@ end
 
 function PredictionInput:getRealRadius()
   if self.UseBoundingRadius then
-    return self.Radius + self.Unit.BoundingRadius
+    return self.Radius + self.Unit.boundingRadius
   else
     return self.Radius
   end
@@ -263,6 +291,24 @@ PredictionOutput._castPosition = player.pos
 -- </summary>
 PredictionOutput._unitPosition = player.pos
 
+
+---------PREDICTION OUTPUT CONSTRUCTOR ---------------
+function PredictionOutput:__init(input)
+  self.Input = input
+end
+function PredictionOutput:__init(castPosition, unitPosition, hitchance)
+  self._castPosition = castPosition
+  self._unitPosition = unitPosition
+  self.HitChance = hitchance
+end
+function PredictionOutput:__init(input, castPosition, unitPosition, hitchance)
+  self.Input = input
+  self._castPosition = castPosition
+  self._unitPosition = unitPosition
+  self.HitChance = hitchance
+end
+
+
 -- <summary>
 --     The number of targets the skillshot will hit (only if aoe was enabled).
 -- </summary>
@@ -281,7 +327,7 @@ function PredictionOutput:getCastPosition()
   if self._castPosition:valid() && self._castPosition:to2D():valid() then
     return setZ(self._castPosition)
   else
-    return self.Input.Unit.pos
+    return self.Input.Unit.serverPos
   end
 end
 function PredictionOutput:setCastPosition(value)
@@ -296,11 +342,91 @@ function PredictionOutput:getUnitPosition()
   if self._unitPosition:to2D():valid() then
     return setZ(self._unitPosition)
   else
-    return self.Input.Unit.pos
+    return self.Input.Unit.serverPos
   end
 end
 
 function PredictionOutput:setUnitPosition(value)
   self._unitPosition = value;
+end
+
+
+-- <summary>
+--     Class used for calculating the position of the given unit after a delay.
+-- </summary>
+local Prediction = class "Prediction"
+
+---need to addd menu, will check later if neded
+
+
+
+-- <summary>
+--     Gets the prediction.
+-- </summary>
+-- <param name="unit">The unit.</param>
+-- <param name="delay">The delay.</param>
+-- <returns>PredictionOutput.</returns>
+-- parameter is of type input with unit, delay,radius,speed, collisionable
+function Prediction:getPrediction(unit,delay)
+  return Prediction:getPrediction(predictionInput(unit,delay))
+end
+
+function Prediction:getPrediction(unit,delay, radius)
+  return Prediction:getPrediction(predictionInput(unit,delay,radius))
+end
+
+function Prediction:getPrediction(unit,delay, radius,speed)
+  return Prediction:getPrediction(predictionInput(unit,delay,radius,speed))
+end
+function Prediction:getPrediction(unit,delay, radius,speed, collisionable)
+  return Prediction:getPrediction(predictionInput(unit,delay,radius,speed, collisionable))
+end
+
+function Prediction:getPrediction(input)
+  return Prediction:getPrediction(input, true , true)
+end
+
+
+
+function Prediction:getDashingPrediction(input)
+  local dashData = input.Unit.path
+  local result= PredictionOutput(input)
+
+  ---- here i need to make a check to see if the dash is not a blink
+  if dashData.isDashing then
+    local endP = dashData.endPos
+    local getPositionOnPath()
+  end
+end
+
+function Prediction:getImmobilePrediction( input, remainingImmobileT)
+  local timeToReachTargetPosition = input.Delay + input.Unit.pos:dist(input.getFrom()) / input.Speed;
+  if (timeToReachTargetPosition <= remainingImmobileT + input.getRealRadius() / input.Unit.moveSpeed) then
+    return PredictionOutput(input.Unit.pos, input.Unit.pos, HitChance.Immobile)
+  end
+  -- if not, imma still cast there as chance are pretty high
+  return PredictionOutput(input, input.Unit.serverPos, inputUnit.serverPos, HitChance.High)
+end
+
+--- here path is a table of vec2
+
+function Prediction:getPositionOnPath(input, path, speed)
+  -- kind of ternary operator
+  if not speed then
+    speed= -1
+  end
+  if math.abs(speed - (-1)) < 0.00000000001 then-- should compare to epsilon but should be fine here
+    speed= input.Unit.moveSpeed
+  else
+    speed= speed
+  end
+  if #path <= 1 then
+    return PredictionOutput(input, input.Unit.serverPos, input.Unit.serverPos, HitChance.VeryHigh)
+  end
+  local pLenght= path[0]:dist(path[1])
+  --skillshots with only a de;ay
+  if pLenght >= input.Delay * speed - input.getRealRadius() && math.abs(input.Speed - 100000000000) < 0.0000000001 then
+    
+  end
 end
 print("end of dobby pred")
