@@ -180,30 +180,34 @@ PredictionInput._rangeCheckFrom = player.pos
 
 
 --constructors i need in lua for predictionInput
-function PredictionInput:__init(unit, delay)
+--[[
+function PredictionInput:__init(...)
+  self["__init" .. select("#", ...)](self, ...)
+end
+function PredictionInput:__init0(unit, delay)
   self.Unit = unit
   self.Delay= delay
 end
 
-function PredictionInput:__init(unit, delay, radius)
+function PredictionInput:__init1(unit, delay, radius)
   self.Unit = unit
   self.Delay= delay
   self.Radius= radius
 end
 
-function PredictionInput:__init(unit, delay, radius, speed)
+function PredictionInput:__init2(unit, delay, radius, speed)
   self.Unit = unit
   self.Delay= delay
   self.Radius= radius
   self.Speed= speed
 end
-
+]]
 function PredictionInput:__init(unit, delay, radius, speed, collisionable)
   self.Unit = unit
-  self.Delay= delay
-  self.Radius= radius
-  self.Speed= speed
-  self.CollisionObjects= collisionable
+  self.Delay= delay or 0 --default
+  self.Radius= radius or 0 --default
+  self.Speed= speed or 0 -- default
+  self.CollisionObjects= collisionable or {}
 end
 
 function PredictionInput:getFrom() 
@@ -293,19 +297,24 @@ PredictionOutput._unitPosition = player.pos
 
 
 ---------PREDICTION OUTPUT CONSTRUCTOR ---------------
-function PredictionOutput:__init(input)
+--[[
+function PredictionInput:__init(...)
+  self["__init" .. select("#", ...)](self, ...)
+end
+function PredictionOutput:__init0(input)
   self.Input = input
 end
-function PredictionOutput:__init(castPosition, unitPosition, hitchance)
+function PredictionOutput:__init1(castPosition, unitPosition, hitchance)
   self._castPosition = castPosition
   self._unitPosition = unitPosition
   self.HitChance = hitchance
-end
+end]]
 function PredictionOutput:__init(input, castPosition, unitPosition, hitchance)
   self.Input = input
-  self._castPosition = castPosition
-  self._unitPosition = unitPosition
-  self.HitChance = hitchance
+  if castPosition then self._castPosition = castPosition end
+  if unitPosition then  self._unitPosition = unitPosition end
+  if hitchance then elf.HitChance = hitchance end
+
 end
 
 
@@ -391,7 +400,7 @@ end
 function Prediction:getDashingPrediction(input)
   local dashData = input.Unit.path
   local result= PredictionOutput(input)
-
+  
   ---- here i need to make a check to see if the dash is not a blink
   if dashData.isDashing then
     local endP = dashData.endPos
@@ -402,7 +411,7 @@ end
 function Prediction:getImmobilePrediction( input, remainingImmobileT)
   local timeToReachTargetPosition = input.Delay + input.Unit.pos:dist(input:getFrom()) / input.Speed;
   if (timeToReachTargetPosition <= remainingImmobileT + input:getRealRadius() / input.Unit.moveSpeed) then
-    return PredictionOutput(input.Unit.pos, input.Unit.pos, HitChance.Immobile)
+    return PredictionOutput(nil, input.Unit.serverPos, input.Unit.pos, HitChance.Immobile)
   end
   -- if not, imma still cast there as chance are pretty high
   return PredictionOutput(input, input.Unit.serverPos, inputUnit.serverPos, HitChance.High)
@@ -426,7 +435,24 @@ function Prediction:getPositionOnPath(input, path, speed)
   local pLenght= path[0]:dist(path[1])
   --skillshots with only a de;ay
   if pLenght >= input.Delay * speed - input:getRealRadius() && math.abs(input.Speed - 100000000000) < 0.0000000001 then
-    let tDistance = input.Delay * speed - input
+    local tDistance = input.Delay * speed - input:getRealRadius()
+    for i= 0,#path do
+      local a= path[i]
+      local b= path[i+1]
+      local d = a:dist(b)
+      if  d >= tDistance then
+        local direction= vec2(b.x-a.x, b.y-a.y).norm()
+        local cp = vec2(a.x + direction.x * tDistance, a.y + direction.y * tDistance)
+        local intermediateValue
+        if i == #path-2 then
+          math.min(tDistance, input:getRealRadius(), d)
+        else
+          tDistance + input:getRealRadius()
+        end
+        local p = vec2(a.x + (direction.x * intermediateValue), b.y + (direction.y * intermediateValue))
+
+      end
+    end
   end
 end
 print("end of dobby pred")
