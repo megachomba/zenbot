@@ -4,6 +4,7 @@ local pred = module.internal('pred')
 local damage = module.internal('damage')
 
 print("Dobby Pred loadaded")
+print(vec3(vec2(3, 5)))
 
 
   --- SET Z PORTED from lsharp geometry
@@ -404,7 +405,7 @@ function Prediction:getDashingPrediction(input)
   ---- here i need to make a check to see if the dash is not a blink
   if dashData.isDashing then
     local endP = dashData.endPos
-    local getPositionOnPath()
+    --local getPositionOnPath()
   end
 end
 
@@ -441,16 +442,17 @@ function Prediction:getPositionOnPath(input, path, speed)
       local b= path[i+1]
       local d = a:dist(b)
       if  d >= tDistance then
-        local direction= vec2(b.x-a.x, b.y-a.y).norm()
+        local direction= (b-a).norm()
         local cp = vec2(a.x + direction.x * tDistance, a.y + direction.y * tDistance)
         local intermediateValue
         if i == #path-2 then
-          math.min(tDistance, input:getRealRadius(), d)
+          intermediateValue =  math.min(tDistance, input:getRealRadius(), d)
         else
-          tDistance + input:getRealRadius()
+          intermediateValue = tDistance + input:getRealRadius()
         end
-        local p = vec2(a.x + (direction.x * intermediateValue), b.y + (direction.y * intermediateValue))
-
+        local p = a + direction * intermediateValue
+        return PredictionOutput(input, vec3(cp), vec3(p), HitChance.VeryHigh)
+        --function PredictionOutput:__init(input, castPosition, unitPosition, hitchance)
       end
     end
   end
