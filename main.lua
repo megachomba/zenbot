@@ -4,8 +4,6 @@ local pred = module.internal('pred')
 local damage = module.internal('damage')
 
 print("Dobby Pred loadaded")
-print(vec3(vec2(3, 5)))
-
 
   --- SET Z PORTED from lsharp geometry
 function setZ(v, value)
@@ -69,17 +67,17 @@ local SkillshotType={
 -- <summary>
 --     The skillshot is linear.
 -- </summary>
-SkillshotLine,
+SkillshotLine= 1,
 
 -- <summary>
 --     The skillshot is circular.
 -- </summary>
-SkillshotCircle,
+SkillshotCircle= 2,
 
 -- <summary>
 --     The skillshot is conical.
 -- </summary>
-SkillshotCone
+SkillshotCone=3
 }
 
 -- <summary>
@@ -89,27 +87,27 @@ local CollisionableObjects = {
 -- <summary>
 --     Minions.
 -- </summary>
-Minions,
+Minions=1,
 
 -- <summary>
 --     Enemy heroes.
 -- </summary>
-Heroes,
+Heroes=2,
 
 -- <summary>
 --     Yasuo's Wind Wall (W)
 -- </summary>
-YasuoWall,
+YasuoWall=3,
 
 -- <summary>
 --     Walls.
 -- </summary>
-Walls,
+Walls=4,
 
 -- <summary>
 --     Ally heroes.
 -- </summary>
-Allies
+Allies=5
 }
 
 -- <summary>
@@ -451,9 +449,16 @@ function Prediction:getPositionOnPath(input, path, speed)
           intermediateValue = tDistance + input:getRealRadius()
         end
         local p = a + direction * intermediateValue
-        return PredictionOutput(input, vec3(cp), vec3(p), HitChance.VeryHigh)
+        local hitchance
+        if pred.trace.newpath(input.Unit, 0 , 0.1) then
+          hitchance= HitChance.VeryHigh
+        else
+          hitchance= HitChance.High
+        end
+        return PredictionOutput(input, vec3(cp), vec3(p), hitchance)
         --function PredictionOutput:__init(input, castPosition, unitPosition, hitchance)
       end
+      tDistance= tDistance-d
     end
   end
 end
