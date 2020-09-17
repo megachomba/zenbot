@@ -14,6 +14,143 @@ function setZ(v, value)
   end
 end
 
+-- this returns a table of vec2, ported from utility CS
+function CutPath( path, distance)
+  local result = {}
+  local Distance = distance;
+  if (distance < 0) then 
+    path[0] = path[0] + distance * (path[1] - path[0]):norm();
+    return path;
+  end
+  for i = 0, #path.Count - 1 do 
+    local dist = path[i]:dist(path[i + 1])
+    if (dist > Distance) then
+      table.insert(result, path[i] + Distance * (path[i + 1] - path[i]).norm())
+      for j= i+1, #path do
+        table.insert( result,path[j] )
+      end
+      break
+    end
+    Distance = Distance - dist;
+  end
+  if (#result.Count > 0) then
+    return result
+  else
+    local last = {}
+    table.insert( last,path[#path] )
+    return last
+  end
+end
+
+ ----------- COllsinion ported from geometry
+-- <summary>
+        --     Gets the vectors movement collision.
+        -- </summary>
+        -- <param name="startPoint1">The start point1.</param>
+        -- <param name="endPoint1">The end point1.</param>
+        -- <param name="v1">The v1.</param>
+        -- <param name="startPoint2">The start point2.</param>
+        -- <param name="v2">The v2.</param>
+        -- <param name="delay">The delay.</param>
+        -- <returns></returns>
+function VectorMovementCollision(startPoint1,endPoint1,v1,startPoint2,v2,delay)
+  if not delay then
+    delay= 0
+  end
+  local sP1x = startPoint1.X
+  local sP1y = startPoint1.Y
+  local eP1x = endPoint1.X
+  local eP1y = endPoint1.Y
+  local sP2x = startPoint2.X
+  local sP2y = startPoint2.Y
+  local d = eP1x - sP1x
+  local e = eP1y - sP1y
+  local dist = math.sqrt(d * d + e * e)
+  local t1 = nil
+  local S
+  local K
+  if math.abs(dist) > 0.0000000000001 then
+    S= v1 * d / dist
+  else
+    S=0
+  end
+  if (math.abs(dist) >  0.0000000000001) then
+    K= v1 * e / dist
+  else
+    K = 0
+  end
+  local r = sP2x - sP1x
+  local j = sP2y - sP1y
+  local  c = r * r + j * j
+  if (dist > 0) then
+    if (math.abs(v1 - 1000000000) < 0.0000000000001) then
+      local t = dist / v1
+      if (2 * t >= 0) then
+        t1=t
+      else
+        t1=nil
+      end
+    elseif (math.abs(v2 - 1000000000) < 0.0000000000001) then
+      t1 = 0
+    else
+      local a = S * S + K * K - v2 * v2 
+      local b = -r * S - j * K
+      if (math.abs(a) < 0.0000000000001) then
+        if (math.abs(b) < 0.0000000000001) then
+          if math.Abs(c) <  0.0000000000001 then
+            t1=0
+          else
+            t1=nil
+          end
+        else
+          local t = -c / (2 * b)
+          if  (v2 * t >= 0) then
+            t1=t
+          else
+            t1= nil
+          end
+        end    
+      else
+        local sqr = b * b - a * c;
+        if (sqr >= 0) then
+          local nom = math.sqrt(sqr)
+          local t = (-nom - b) / a
+          if v2 * t >= 0 then
+            t1= t
+          else
+            t1= nil
+          end
+          t = (nom - b) / a
+          if v2 * t >= 0 then
+            t2= t
+          else
+            t2= nil
+          end
+          if ((t2) && (t1)) then
+            if (t1 >= delay && t2 >= delay) then
+              t1 = Math.Min(t1, t2)
+            elseif (t2 >= delay) then
+              t1 = t2
+            end
+          end
+        end
+      end
+    end
+  elseif (math.abs(dist) < 0.0000000000001) then
+    t1 = 0
+  end
+  local vector
+  if t1 then
+    vector= vec2(sP1x + S * t1, sP1y + K * t1)
+  else
+    vector= vec2(0,0)
+  end
+  local newObject = {t1, vector}
+end
+
+
+--- import from from dobby LEE
+
 local  HitChance = {
 -- <summary>
 --     The target is immobile.
@@ -237,7 +374,9 @@ function PredictionInput:getRangeCheckFrom()
     return player.serverPos
   end
 end
-
+function PredictionInput:setRangeCheckFrom(value)
+  self._rangeCheckFrom= value
+end
   -- <summary>
   --     Gets the real radius.
   -- </summary>
@@ -312,7 +451,7 @@ function PredictionOutput:__init(input, castPosition, unitPosition, hitchance)
   self.Input = input
   if castPosition then self._castPosition = castPosition end
   if unitPosition then  self._unitPosition = unitPosition end
-  if hitchance then elf.HitChance = hitchance end
+  if hitchance then self.HitChance = hitchance end
 
 end
 
@@ -322,7 +461,7 @@ end
 -- </summary>
 -- <value>The aoe targets hit count.</value>
 function PredictionOutput:getAoeTargetsHitCount()
-  return math.max(self._aoeTargetsHitCount, self.AoeTargetsHit.Count);
+  return math.max(self._aoeTargetsHitCount, #(self.AoeTargetsHit));
 end
 -- <summary>
 --     The position where the skillshot should be casted to increase the accuracy.
@@ -461,5 +600,53 @@ function Prediction:getPositionOnPath(input, path, speed)
       tDistance= tDistance-d
     end
   end
+  if pLenght >= input.Delay * speed - input:getRealRadius() && math.abs(input.Speed - 100000000000) > 0.0000000001 then
+    if input.Type == SkillshotType.SkillshotLine or input.Type == SkillshotType.SkillshotCone then
+      local d= input.Delay * speed - input:getRealRadius()
+      if input:getFrom():distSqr(input.Unit.serverPos) < 200 * 200 then
+        d= input.Delay * speed
+      end
+    end
+    path = CutPath(path, d)
+    local tT = 0
+    for i = 0, #path-1 do
+      local a= path[i]
+      local b= path[i+1]
+      local tB = a:dist(b) / speed
+      local direction = (b-a).norm()
+      a= a - speed * tT * direction
+      local sol = VectorMovementCollision(a, b, speed,input:getFrom():to2D(), input.Speed,tT)
+      local t = sol[0]
+      local pos = sol[1]
+      if pos:valid() and t >= tT and t <= tT + tB then
+        if pos:distSqr(b) < 20 then 
+          break
+        end
+        local p = pos + input:getRealRadius() * direction
+        if input.Type ==  SkillshotType.SkillshotLine && false then
+          local alpha = (input:getFrom():to2D() - p):angle(a-b)
+          if alpha > 30 and alpha < 180 - 30 then
+            local beta = math.asin( input:getRealRadius()/ p:dist(input:getFrom()))
+            local cp1= input:getFrom():to2D() + (p -  input:getFrom():to2D()).rotate(beta)
+            local cp2= input:getFrom():to2D() + (p -  input:getFrom():to2D()).rotate(-beta)
+            if cp1:distSqr(pos) < cp2:distSqr(pos) then
+              pos= cp1
+            else
+              pos= cp2
+            end
+          end
+        end
+        local hitchance
+        if pred.trace.newpath(input.Unit, 0 , 0.1) then
+          hitchance= HitChance.VeryHigh
+        else
+          hitchance= HitChance.High
+        end
+        return {input, pos:to3D(), p:to3D(), hitchance}
+      end
+    end
+  end
+  local position = path[#path]
+  return {input, position:to3D(), position:to3D(), HitChance.Medium}
 end
 print("end of dobby pred")
